@@ -20,21 +20,23 @@
 
 /* Verbose debugging */
 #define DEBUG
-#define SEQINDEX 1
-#define WORDSUM 0
+#define SEQINDEX 0
+#define WORDSUM 1
 #define MYHASH 0
 /* Main program */
 int main()
   {
     struct sockaddr_in si_server, si_client;
     struct sockaddr *server, *client;
-    int s, i;
+    int s;
     unsigned int len=sizeof(si_server);
     char messagein[MAX_BUFFER_SIZE];
     char messageout[MAX_BUFFER_SIZE];
+    #if SEQINDEX 
     char definitionStrings[MAX_BUFFER_SIZE][MAX_BUFFER_SIZE];
     char definitionHex[MAX_BUFFER_SIZE][MAX_BUFFER_SIZE];
     int numOfDefinitions =0;
+    #endif
     int readBytes;
 
     if ((s=socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP))==-1)
@@ -90,6 +92,8 @@ int main()
           }
           if(strncmp(currentWord, "0x", 2))
           {
+            //Sequential Index
+            #if SEQINDEX
             for(int t =0; t<numOfDefinitions; t++)
             {
               //Check if its in there
@@ -101,22 +105,29 @@ int main()
             }
             if(hashTo == NULL) //Then hash the word
             {
-              //Sequential Index
-              #if SEQINDEX
               strcpy(definitionStrings[numOfDefinitions],currentWord);
               sprintf(definitionHex[numOfDefinitions], "0x%x", numOfDefinitions+1);
-              //Word Sum
-              #elif WORDSUM
-              
-              //Your Hash
-              #elif MYHASH
-              #endif
               hashTo = definitionHex[numOfDefinitions++];
             }
             sprintf(messageout +strlen(messageout), "%s%s", hashTo, punctuation);
+             //Word Sum
+            #elif WORDSUM
+            //grab the word and create a hash 
+            int hashNum =0;
+            for(unsigned int t = 0; t<strlen(currentWord); t++)
+            {
+              hashNum += currentWord[t];
+            }
+            sprintf(messageout +strlen(messageout), "0x%x%s", hashNum, punctuation);
+            //Your Hash
+            #elif MYHASH
+            #endif
           }
           else
           {
+            //Sequential Index
+            hashTo = "(Invalid)";
+            #if SEQINDEX
             for(int t =0; t<numOfDefinitions; t++)
             {
               //Check if its in there
@@ -126,8 +137,11 @@ int main()
                 break;
               }
             }
-            if(hashTo == NULL)
-              hashTo = "(Invalid)";
+            //Word Sum
+            #elif WORDSUM
+            //Your Hash
+            #elif MYHASH
+            #endif
             sprintf(messageout +strlen(messageout), "%s%s", hashTo, punctuation);
           }
           currentWord = strtok(NULL, " ");
